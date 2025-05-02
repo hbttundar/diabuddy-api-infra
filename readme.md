@@ -1,68 +1,80 @@
 # diabuddy-api-infra
 
-Shared infrastructure module for the DiaBuddy microservices platform. This package provides reusable, low-level building blocks for database, HTTP, time, and general-purpose operations.
+Shared infrastructure module for the DiaBuddy microservices platform. This package provides reusable, domain-agnostic building blocks for:
+- Database abstraction and lifecycle management
+- Common repository operations
+- HTTP client and router setup
+- General-purpose and secure helpers (datetime, password)
 
 ---
 
-## 📦 Features
+## 📦 Modules
 
-### Database
-- `database.Connection`: Unified DB interface
-- `NewPostgresConnection`: PG implementation
+### 🗃️ database/
+- `Connection` interface (abstract DB contract)
+- `PostgresConnection` implementation
+- `WrapInTransaction()` with advisory lock
 - Constants for CRUD operations (e.g. `InsertOperation`, `UpdateOperation`)
 
-### HTTP
-- `SetupGinRouter`: Bootstraps Gin with middleware and custom routes
-- `DefaultHTTPClient`: Sensible HTTP client for service-to-service calls
+### 🗄️ persistence/
+- `BaseRepository`: common SQL ops (Exec, ScanRow, ParseResult)
 
-### Helpers
-- `password`: bcrypt hashing and comparison helpers
-- `datetime`: date formatting, parsing, UTC utils
-- `utils`: generic helpers like `ToPointer`, `Coalesce`
+### 🌐 http/
+- `SetupGinRouter`: initializes Gin engine with shared middleware
+- `DefaultHTTPClient`: opinionated shared `http.Client`
+
+### 🔐 helpers/
+- `hasher`: bcrypt hash & verify password
+- `datetime`: UTC utils, format/parse helpers
+- `utils`: general helpers (`ToPointer`, `Coalesce`, etc.)
 
 ---
 
 ## 🔗 Usage
 
-### In Your Microservice
+### From a microservice
 ```go
 import "github.com/hbttundar/diabuddy-api-infra/database"
+import "github.com/hbttundar/diabuddy-api-infra/persistence"
 
-conn := database.NewPostgresConnection(...)
+conn := database.NewPostgresConnection(...) // or use default config
+repo := persistence.NewBaseRepository(conn)
 ```
 
-### In Testkit
+### From testkit
 ```go
 import "github.com/hbttundar/diabuddy-api-infra/helpers"
 
 now := helpers.NowUTC()
-ptr := helpers.ToPointer("value")
+hash, _ := helpers.HashPassword("secret")
 ```
 
 ---
 
-## 🧱 Structure
+## 🧱 Directory Structure
 
 ```
-database/     # Shared DB interface + Postgres impl + constants
-http/         # Shared Gin router + HTTP client
-helpers/      # General-purpose helpers (password, datetime, etc.)
+database/     # Abstract DB interfaces and PG implementation
+persistence/  # Base repository abstraction for microservices
+http/         # Gin router + HTTP client
+helpers/      # Shared logic for time, passwords, general use
 ```
 
 ---
 
 ## ✅ Best Practices
-- Keep shared domain-agnostic code here
-- Do NOT place domain-specific logic (e.g. User, Profile) in infra
-- Keep this library focused, reusable, and stable
+- This module should contain **only infrastructure** logic
+- Do not mix domain-specific models or services
+- Use `diabuddy-errors` for consistent API error handling
+- Use `diabuddy-api-config` for all env and DB config needs
 
 ---
 
-## 🛠 Future Additions
-- Kafka and Elasticsearch client setups
-- Retry and circuit breaker utilities
-- Service discovery hooks (Consul, etc.)
+## 🔧 Future Enhancements
+- Kafka/Elasticsearch clients
+- Circuit breaker, retry helpers
+- Observability (OpenTelemetry, metrics)
 
 ---
 
-Licensed under MIT.
+Licensed under MIT

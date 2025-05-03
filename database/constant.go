@@ -7,5 +7,6 @@ const (
 	UpdateOperation       = "update"
 	SoftDeleteOperation   = "soft_delete"
 	HardDeleteOperation   = "hard_delete"
+	RestoreOperation      = "restore"
 	ContextTransactionKey = "transaction"
 )

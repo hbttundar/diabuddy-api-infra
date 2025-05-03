@@ -154,7 +154,7 @@ func (br *BaseRepository) ParseResult(result sql.Result, operationType string) e
 // - dataQuery & dataArgs:      e.g. "SELECT id,… FROM users ORDER BY … LIMIT $1 OFFSET $2", []interface{}{perPage, offset}
 // - scanTarget:                factory to make one row object + its []interface{} of field-ptrs
 // - resultsPtr:                pointer to a slice (e.g. *[]*User)
-func (br *BaseRepository) Paginate(ctx context.Context, tx *sql.Tx, page, perPage int, countQuery string, countArgs []interface{}, dataQuery string, dataArgs []interface{}, scanTarget func() (interface{}, []interface{}), results interface{}) (*pagination.Pagination, errors.ApiErrors) {
+func (br *BaseRepository) Paginate(ctx context.Context, tx *sql.Tx, page, perPage int, countQuery string, countArgs []interface{}, dataQuery string, dataArgs []interface{}, scanTarget func() (interface{}, []interface{}), results interface{}) (pagination.Paginator, errors.ApiErrors) {
 
 	// Get total count
 	row := br.QueryRowContext(ctx, tx, countQuery, countArgs...)
@@ -174,13 +174,15 @@ func (br *BaseRepository) Paginate(ctx context.Context, tx *sql.Tx, page, perPag
 		return nil, err
 	}
 
-	// Return pointer to reusable pagination object
-	return pagination.NewPagination(
+	// Return pointer to reusable paginator object
+	p := pagination.NewPagination(
 		pagination.WithPage(page),
 		pagination.WithLimit(perPage),
 		pagination.WithTotal(total),
 		pagination.WithData(results),
-	), nil
+	)
+
+	return pagination.NewDataPaginator(p), nil
 }
 
 func (br *BaseRepository) Close() errors.ApiErrors {

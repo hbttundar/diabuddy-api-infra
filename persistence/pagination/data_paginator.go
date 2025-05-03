@@ -2,6 +2,8 @@ package pagination
 
 import "math"
 
+var _ Paginator = (*DataPaginator)(nil)
+
 // PaginatedResponse is the final response structure returned to clients.
 type PaginatedResponse struct {
 	Data any `json:"data"`
@@ -32,7 +34,7 @@ func (p *DataPaginator) TotalPages() int {
 func (p *DataPaginator) HasNext() bool { return p.Page() < p.Last() }
 func (p *DataPaginator) HasPrev() bool { return p.Page() > 1 }
 
-func (p *DataPaginator) ToResponse() any {
+func (p *DataPaginator) ToResponse() PaginatedResponse {
 	return PaginatedResponse{
 		Data: p.Data(),
 		PaginationMeta: PaginationMeta{

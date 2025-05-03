@@ -46,7 +46,7 @@ func TestDataPaginator_ToResponse(t *testing.T) {
 		pagination.WithData([]int{1, 2, 3}),
 	)
 	dp := pagination.NewDataPaginator(p)
-	r := dp.ToResponse().(pagination.PaginatedResponse)
+	r := dp.ToResponse()
 
 	assert.Equal(t, 2, r.Page)
 	assert.Equal(t, 10, r.Limit)

@@ -3,12 +3,10 @@ package repository_test
 import (
 	"errors"
 	"github.com/hbttundar/diabuddy-api-infra/persistence/repository"
-	"testing"
-
+	infraerrors "github.com/hbttundar/diabuddy-errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
-	infraerrors "github.com/hbttundar/diabuddy-errors"
+	"testing"
 )
 
 type fakeResult struct {

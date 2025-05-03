@@ -1,4 +1,4 @@
-package persistence
+package repository
 
 import (
 	"context"
@@ -6,21 +6,11 @@ import (
 	baseErrors "errors"
 	"fmt"
 	"github.com/hbttundar/diabuddy-api-infra/database"
+	"github.com/hbttundar/diabuddy-api-infra/persistence/pagination"
 	"github.com/hbttundar/diabuddy-errors"
 	"log"
-	"math"
 	"reflect"
 )
-
-type Pagination struct {
-	Data     interface{} `json:"data"`
-	Page     int         `json:"page"`
-	PerPage  int         `json:"per_page"`
-	Total    int         `json:"total"`
-	LastPage int         `json:"last_page"`
-	HasNext  bool        `json:"has_next"`
-	HasPrev  bool        `json:"has_prev"`
-}
 
 type BaseRepository struct {
 	Connection database.Connection
@@ -164,13 +154,16 @@ func (br *BaseRepository) ParseResult(result sql.Result, operationType string) e
 // - dataQuery & dataArgs:      e.g. "SELECT id,… FROM users ORDER BY … LIMIT $1 OFFSET $2", []interface{}{perPage, offset}
 // - scanTarget:                factory to make one row object + its []interface{} of field-ptrs
 // - resultsPtr:                pointer to a slice (e.g. *[]*User)
-func (br *BaseRepository) Paginate(ctx context.Context, tx *sql.Tx, page, perPage int, countQuery string, countArgs []interface{}, dataQuery string, dataArgs []interface{}, scanTarget func() (interface{}, []interface{}), results interface{}) (*Pagination, errors.ApiErrors) {
+func (br *BaseRepository) Paginate(ctx context.Context, tx *sql.Tx, page, perPage int, countQuery string, countArgs []interface{}, dataQuery string, dataArgs []interface{}, scanTarget func() (interface{}, []interface{}), results interface{}) (*pagination.Pagination, errors.ApiErrors) {
+
+	// Get total count
 	row := br.QueryRowContext(ctx, tx, countQuery, countArgs...)
 	var total int
 	if err := br.ScanRow(row, &total); err != nil {
 		return nil, err
 	}
 
+	// Execute paginated query
 	offset := (page - 1) * perPage
 	args := append(dataArgs, perPage, offset)
 	rows, err := br.QueryContext(ctx, tx, dataQuery, args...)
@@ -181,16 +174,13 @@ func (br *BaseRepository) Paginate(ctx context.Context, tx *sql.Tx, page, perPag
 		return nil, err
 	}
 
-	lastPage := int(math.Ceil(float64(total) / float64(perPage)))
-	return &Pagination{
-		Data:     results,
-		Page:     page,
-		PerPage:  perPage,
-		Total:    total,
-		LastPage: lastPage,
-		HasNext:  page < lastPage,
-		HasPrev:  page > 1,
-	}, nil
+	// Return pointer to reusable pagination object
+	return pagination.NewPagination(
+		pagination.WithPage(page),
+		pagination.WithLimit(perPage),
+		pagination.WithTotal(total),
+		pagination.WithData(results),
+	), nil
 }
 
 func (br *BaseRepository) Close() errors.ApiErrors {

@@ -1,12 +1,11 @@
-package http_test
+package request_test
 
 import (
+	infrahttp "github.com/hbttundar/diabuddy-api-infra/http/request"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
-
-	infrahttp "github.com/hbttundar/diabuddy-api-infra/http"
 )
 
 func TestDefaultHTTPClient(t *testing.T) {

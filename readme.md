@@ -1,80 +1,78 @@
 # diabuddy-api-infra
 
-Shared infrastructure module for the DiaBuddy microservices platform. This package provides reusable, domain-agnostic building blocks for:
-- Database abstraction and lifecycle management
-- Common repository operations
-- HTTP client and router setup
-- General-purpose and secure helpers (datetime, password)
+Shared infrastructure module for the DiaBuddy microservices platform.
+This package provides reusable, domain-agnostic building blocks to standardize:
+
+* Database abstraction and lifecycle management
+* Common repository patterns
+* HTTP router and client setup
+* Secure & general-purpose helper utilities
 
 ---
 
-## 📦 Modules
+## Modules
 
-### 🗃️ database/
-- `Connection` interface (abstract DB contract)
-- `PostgresConnection` implementation
-- `WrapInTransaction()` with advisory lock
-- Constants for CRUD operations (e.g. `InsertOperation`, `UpdateOperation`)
+### `database/`
 
-### 🗄️ persistence/
-- `BaseRepository`: common SQL ops (Exec, ScanRow, ParseResult)
+* `Connection` interface: abstract DB connection lifecycle
+* `PostgresConnection`: PostgreSQL implementation
+* `WrapInTransaction()`: transaction + advisory lock helper
+* Constants: `InsertOperation`, `UpdateOperation`, etc.
 
-### 🌐 http/
-- `SetupGinRouter`: initializes Gin engine with shared middleware
-- `DefaultHTTPClient`: opinionated shared `http.Client`
+### `persistence/`
 
-### 🔐 helpers/
-- `hasher`: bcrypt hash & verify password
-- `datetime`: UTC utils, format/parse helpers
-- `utils`: general helpers (`ToPointer`, `Coalesce`, etc.)
+* `BaseRepository`: common DB query/scan/exec logic
+* Shared pagination support (`paginator`, `Pagination`)
+
+### `http/`
+
+#### `router/` – Pluggable HTTP Router Engine
+
+* Abstract `Router` system with functional options
+* `Engine` interface defines `GET`, `POST`, `Use`, `Run`, etc.
+* Ready-to-use adapters:
+
+    * `GinRouter` (`gin-gonic/gin`)
+    * `ChiRouter` (`go-chi/chi`)
+    * `FiberRouter` (`gofiber/fiber`)
+    * `HttpRouter` (`julienschmidt/httprouter`)
+* Supports middleware injection via `WithMiddleware` excepts `HttpRouter` that didn't support middleware
+
+#### `client/`
+
+* `DefaultHTTPClient()`: shared, tuned `http.Client` for external API calls
+
+### `helpers/`
+
+* `hasher`: bcrypt-based password hash/verify
+* `datetime`: UTC helpers for consistent time handling
+* `utils`: generic helpers (`ToPointer`, `Coalesce`, etc.)
 
 ---
 
-## 🔗 Usage
+## Usage
 
-### From a microservice
+### Setup a Router in Your Microservice
+
 ```go
-import "github.com/hbttundar/diabuddy-api-infra/database"
-import "github.com/hbttundar/diabuddy-api-infra/persistence"
+import (
+  "github.com/hbttundar/diabuddy-api-infra/http/router"
+  "github.com/gin-gonic/gin"
+)
 
-conn := database.NewPostgresConnection(...) // or use default config
-repo := persistence.NewBaseRepository(conn)
+func NewRouter() *router.Router {
+  return router.NewRouter(
+    router.WithEngine(router.NewGinRouter()),
+    router.WithMiddleware(gin.Logger(), gin.Recovery()),
+  )
+}
 ```
 
-### From testkit
+### Start the Engine
+
 ```go
-import "github.com/hbttundar/diabuddy-api-infra/helpers"
-
-now := helpers.NowUTC()
-hash, _ := helpers.HashPassword("secret")
+r := NewRouter()
+_ = r.Run(":8080")
 ```
 
----
-
-## 🧱 Directory Structure
-
-```
-database/     # Abstract DB interfaces and PG implementation
-persistence/  # Base repository abstraction for microservices
-http/         # Gin router + HTTP client
-helpers/      # Shared logic for time, passwords, general use
-```
-
----
-
-## ✅ Best Practices
-- This module should contain **only infrastructure** logic
-- Do not mix domain-specific models or services
-- Use `diabuddy-errors` for consistent API error handling
-- Use `diabuddy-api-config` for all env and DB config needs
-
----
-
-## 🔧 Future Enhancements
-- Kafka/Elasticsearch clients
-- Circuit breaker, retry helpers
-- Observability (OpenTelemetry, metrics)
-
----
-
-Licensed under MIT
+Licensed under MIT.

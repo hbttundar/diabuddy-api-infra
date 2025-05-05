@@ -1,21 +1,30 @@
 package router
 
+// RouteHandler defines the signature for handling a route.
 type RouteHandler interface{}
+
+// Middleware wraps a RouteHandler, allowing pre- and post-processing.
 type Middleware interface{}
 
+// Engine defines the minimal interface any HTTP engine must implement.
 type Engine interface {
 	GET(path string, handler RouteHandler)
 	POST(path string, handler RouteHandler)
 	PUT(path string, handler RouteHandler)
 	PATCH(path string, handler RouteHandler)
 	DELETE(path string, handler RouteHandler)
-	Run(addr string) error
 }
 
 // HasMiddleware marks engines that support middleware registration.
 type HasMiddleware interface {
 	// Use registers one or more middleware handlers.
 	Use(middleware ...Middleware)
+}
+
+// Runnable marks engines that support running the server.
+type Runnable interface {
+	// Run starts the server with the provided start function.
+	Run(start func() error) error
 }
 
 // RouterOption configures a Router during creation.
@@ -102,10 +111,10 @@ func (r *Router) Use(mw ...Middleware) *Router {
 	return r
 }
 
-// Run starts the underlying engine on the given address.
-func (r *Router) Run(addr string) error {
-	if r.engine != nil {
-		return r.engine.Run(addr)
+// Run starts the underlying engine using the provided start function.
+func (r *Router) Run(start func() error) error {
+	if runnable, ok := r.engine.(Runnable); ok {
+		return runnable.Run(start)
 	}
-	return nil
+	return start()
 }

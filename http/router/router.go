@@ -1,120 +1,106 @@
+// router package: universal router abstraction that supports all engines
 package router
 
-// RouteHandler defines the signature for handling a route.
-type RouteHandler interface{}
+import (
+	"fmt"
+	"strings"
 
-// Middleware wraps a RouteHandler, allowing pre- and post-processing.
+	"github.com/gin-gonic/gin"
+	"github.com/go-chi/chi/v5"
+	"github.com/gofiber/fiber/v2"
+	"github.com/labstack/echo/v4"
+)
+
+// EngineType is the enum type for supported engines
+type EngineType string
+
+const (
+	GinEngine   EngineType = "gin"
+	EchoEngine  EngineType = "echo"
+	FiberEngine EngineType = "fiber"
+	ChiEngine   EngineType = "chi"
+)
+
+// Middleware defines the generic middleware type.
 type Middleware interface{}
 
-// Engine defines the minimal interface any HTTP engine must implement.
-type Engine interface {
-	GET(path string, handler RouteHandler)
-	POST(path string, handler RouteHandler)
-	PUT(path string, handler RouteHandler)
-	PATCH(path string, handler RouteHandler)
-	DELETE(path string, handler RouteHandler)
+// Adapter represents the routing adapter with optional capabilities.
+type Adapter interface {
+	GET(path string, handlers ...interface{})
+	POST(path string, handlers ...interface{})
+	PUT(path string, handlers ...interface{})
+	PATCH(path string, handlers ...interface{})
+	DELETE(path string, handlers ...interface{})
+	Adapter() Adapter
 }
 
-// HasMiddleware marks engines that support middleware registration.
-type HasMiddleware interface {
-	// Use registers one or more middleware handlers.
-	Use(middleware ...Middleware)
-}
-
-// Runnable marks engines that support running the server.
-type Runnable interface {
-	// Run starts the server with the provided start function.
-	Run(start func() error) error
-}
-
-// RouterOption configures a Router during creation.
+// RouterOption configures a Router during setup.
 type RouterOption func(*Router)
 
-// Router composes an engine and optional middleware, applying them on startup.
+// Router uses an Adapter to route requests.
 type Router struct {
-	engine     Engine
+	adapter    Adapter
 	middleware []Middleware
 }
 
-// NewRouter constructs a Router, applies all options, and registers middleware if supported.
-func NewRouter(opts ...RouterOption) *Router {
-	r := &Router{}
-	for _, opt := range opts {
-		opt(r)
+// NewRouterFromType selects adapter by engine type and returns a ready router
+func NewRouterFromType(engineType EngineType, middleware ...Middleware) *Router {
+	var adapter Adapter
+
+	switch strings.ToLower(string(engineType)) {
+	case string(GinEngine):
+		adapter = NewGinAdapter(gin.New())
+	case string(EchoEngine):
+		adapter = NewEchoAdapter(echo.New())
+	case string(FiberEngine):
+		adapter = NewFiberAdapter(fiber.New())
+	case string(ChiEngine):
+		adapter = NewChiAdapter(chi.NewRouter())
+	default:
+		panic("unsupported engine type: " + string(engineType))
 	}
-	// Apply middleware if engine supports it
-	if mwEngine, ok := r.engine.(HasMiddleware); ok && len(r.middleware) > 0 {
-		mwEngine.Use(r.middleware...)
-	}
+
+	r := &Router{adapter: adapter, middleware: middleware}
+	r.applyMiddleware()
 	return r
 }
 
-// WithEngine sets the underlying Engine.
-func WithEngine(e Engine) RouterOption {
-	return func(r *Router) {
-		r.engine = e
+func (r *Router) applyMiddleware() {
+	if mwCapable, ok := r.adapter.(interface{ Use(...Middleware) }); ok && len(r.middleware) > 0 {
+		mwCapable.Use(r.middleware...)
 	}
 }
 
-// WithMiddleware appends middleware to the Router before initialization.
-func WithMiddleware(mw ...Middleware) RouterOption {
-	return func(r *Router) {
-		r.middleware = append(r.middleware, mw...)
-	}
+func (r *Router) GET(path string, handlers ...interface{}) {
+	r.adapter.GET(path, handlers...)
+}
+func (r *Router) POST(path string, handlers ...interface{}) {
+	r.adapter.POST(path, handlers...)
+}
+func (r *Router) PUT(path string, handlers ...interface{}) {
+	r.adapter.PUT(path, handlers...)
+}
+func (r *Router) PATCH(path string, handlers ...interface{}) {
+	r.adapter.PATCH(path, handlers...)
+}
+func (r *Router) DELETE(path string, handlers ...interface{}) {
+	r.adapter.DELETE(path, handlers...)
 }
 
-// Engine exposes the underlying Engine.
-func (r *Router) Engine() Engine {
-	return r.engine
+func (r *Router) Adapter() Adapter {
+	return r.adapter
 }
 
-// GET registers a GET route on the engine.
-func (r *Router) GET(path string, handler RouteHandler) {
-	if r.engine != nil {
-		r.engine.GET(path, handler)
-	}
-}
-
-// POST registers a POST route on the engine.
-func (r *Router) POST(path string, handler RouteHandler) {
-	if r.engine != nil {
-		r.engine.POST(path, handler)
-	}
-}
-
-// PUT registers a PUT route on the engine.
-func (r *Router) PUT(path string, handler RouteHandler) {
-	if r.engine != nil {
-		r.engine.PUT(path, handler)
-	}
-}
-
-// PATCH registers a PATCH route on the engine.
-func (r *Router) PATCH(path string, handler RouteHandler) {
-	if r.engine != nil {
-		r.engine.PATCH(path, handler)
-	}
-}
-
-// DELETE registers a DELETE route on the engine.
-func (r *Router) DELETE(path string, handler RouteHandler) {
-	if r.engine != nil {
-		r.engine.DELETE(path, handler)
-	}
-}
-
-// Use registers additional middleware on-the-fly if the engine supports it.
 func (r *Router) Use(mw ...Middleware) *Router {
-	if mwEngine, ok := r.engine.(HasMiddleware); ok {
-		mwEngine.Use(mw...)
+	if mwCapable, ok := r.adapter.(interface{ Use(...Middleware) }); ok {
+		mwCapable.Use(mw...)
 	}
 	return r
 }
 
-// Run starts the underlying engine using the provided start function.
-func (r *Router) Run(start func() error) error {
-	if runnable, ok := r.engine.(Runnable); ok {
-		return runnable.Run(start)
+func (r *Router) Run(addr ...string) error {
+	if runner, ok := r.adapter.(interface{ Run(...string) error }); ok {
+		return runner.Run(addr...)
 	}
-	return start()
+	return fmt.Errorf("adapter does not implement Run")
 }

@@ -3,6 +3,7 @@ package router
 
 import (
 	"fmt"
+	"net/http"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -103,4 +104,12 @@ func (r *Router) Run(addr ...string) error {
 		return runner.Run(addr...)
 	}
 	return fmt.Errorf("adapter does not implement Run")
+}
+
+func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+	if h, ok := r.adapter.(http.Handler); ok {
+		h.ServeHTTP(w, req)
+		return
+	}
+	panic(fmt.Sprintf("router.adapter %T does not implement http.Handler", r.adapter))
 }

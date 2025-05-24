@@ -1,6 +1,6 @@
 module github.com/hbttundar/diabuddy-api-infra
 
-go 1.24.2
+go 1.24.3
 
 require (
 	github.com/gin-gonic/gin v1.10.0

@@ -58,9 +58,12 @@ func (adapter *FiberAdapter) Use(mw ...Middleware) {
 func (adapter *FiberAdapter) resolveFiberHandlers(handlers ...interface{}) []fiber.Handler {
 	result := make([]fiber.Handler, len(handlers))
 	for i, h := range handlers {
-		fn, ok := h.(fiber.Handler)
+		fn, ok := h.(func(*fiber.Ctx) error)
 		if !ok {
-			panic(fmt.Sprintf("handler at index %d is not a fiber.Handler", i))
+			panic(fmt.Sprintf(
+				"fiber adapter: handler at index %d is %T, want func(*fiber.Ctx) error",
+				i, h,
+			))
 		}
 		result[i] = fn
 	}

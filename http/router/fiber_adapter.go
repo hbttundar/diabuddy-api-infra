@@ -3,6 +3,8 @@ package router
 import (
 	"fmt"
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/adaptor"
+	"net/http"
 )
 
 type FiberAdapter struct {
@@ -68,4 +70,9 @@ func (adapter *FiberAdapter) resolveFiberHandlers(handlers ...interface{}) []fib
 		result[i] = fn
 	}
 	return result
+}
+
+func (adapter *FiberAdapter) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+	fn := adaptor.FiberApp(adapter.engine)
+	fn(w, req)
 }

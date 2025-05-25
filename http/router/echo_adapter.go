@@ -2,6 +2,7 @@ package router
 
 import (
 	"github.com/labstack/echo/v4"
+	"net/http"
 )
 
 type EchoAdapter struct {
@@ -66,4 +67,8 @@ func (adapter *EchoAdapter) resolveEchoHandler(handlers ...interface{}) echo.Han
 	default:
 		panic("EchoAdapter expects exactly one handler")
 	}
+}
+
+func (adapter *EchoAdapter) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+	adapter.engine.ServeHTTP(w, req)
 }

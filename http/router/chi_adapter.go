@@ -72,3 +72,7 @@ func (adapter *ChiAdapter) resolveChiHandler(handlers ...interface{}) http.Handl
 		panic(fmt.Sprintf("chi adapter: handler is %T, want http.Handler or http.HandlerFunc", h))
 	}
 }
+
+func (adapter *ChiAdapter) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+	adapter.router.ServeHTTP(w, req)
+}

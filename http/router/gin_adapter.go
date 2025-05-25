@@ -3,6 +3,7 @@ package router
 import (
 	"fmt"
 	"github.com/gin-gonic/gin"
+	"net/http"
 )
 
 type GinAdapter struct {
@@ -72,4 +73,8 @@ func (adapter *GinAdapter) resolveGinHandlers(handlers ...interface{}) []gin.Han
 		}
 	}
 	return result
+}
+
+func (adapter *GinAdapter) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+	adapter.engine.ServeHTTP(w, req)
 }

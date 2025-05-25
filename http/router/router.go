@@ -32,6 +32,8 @@ type Adapter interface {
 	PUT(path string, handlers ...interface{})
 	PATCH(path string, handlers ...interface{})
 	DELETE(path string, handlers ...interface{})
+	ServeHTTP(w http.ResponseWriter, req *http.Request)
+
 	Adapter() Adapter
 }
 

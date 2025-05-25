@@ -60,11 +60,16 @@ func (adapter *GinAdapter) Use(mw ...Middleware) {
 func (adapter *GinAdapter) resolveGinHandlers(handlers ...interface{}) []gin.HandlerFunc {
 	result := make([]gin.HandlerFunc, len(handlers))
 	for i, h := range handlers {
-		fn, ok := h.(gin.HandlerFunc)
-		if !ok {
+		switch fn := h.(type) {
+		case gin.HandlerFunc:
+			result[i] = fn
+			break
+		case func(*gin.Context):
+			result[i] = gin.HandlerFunc(fn)
+			break
+		default:
 			panic(fmt.Sprintf("handler at index %d is not a gin.HandlerFunc", i))
 		}
-		result[i] = fn
 	}
 	return result
 }

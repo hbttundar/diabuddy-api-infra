@@ -1,6 +1,7 @@
 package router
 
 import (
+	"fmt"
 	"github.com/go-chi/chi/v5"
 	"net/http"
 )
@@ -59,11 +60,15 @@ func (adapter *ChiAdapter) resolveChiHandler(handlers ...interface{}) http.Handl
 	if len(handlers) != 1 {
 		panic("ChiAdapter expects exactly one handler")
 	}
-	if fn, ok := handlers[0].(http.Handler); ok {
+	h := handlers[0]
+	switch fn := h.(type) {
+	case http.Handler:
 		return fn
-	}
-	if fn, ok := handlers[0].(http.HandlerFunc); ok {
+	case http.HandlerFunc:
 		return fn
+	case func(http.ResponseWriter, *http.Request):
+		return http.HandlerFunc(fn)
+	default:
+		panic(fmt.Sprintf("chi adapter: handler is %T, want http.Handler or http.HandlerFunc", h))
 	}
-	panic("ChiAdapter handler must be http.Handler or http.HandlerFunc")
 }

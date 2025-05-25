@@ -58,9 +58,12 @@ func (adapter *EchoAdapter) resolveEchoHandler(handlers ...interface{}) echo.Han
 	if len(handlers) != 1 {
 		panic("EchoAdapter expects exactly one handler")
 	}
-	h, ok := handlers[0].(echo.HandlerFunc)
-	if !ok {
-		panic("EchoAdapter handler must be echo.HandlerFunc")
+	switch fn := handlers[0].(type) {
+	case echo.HandlerFunc:
+		return fn
+	case func(echo.Context) error:
+		return echo.HandlerFunc(fn)
+	default:
+		panic("EchoAdapter expects exactly one handler")
 	}
-	return h
 }
